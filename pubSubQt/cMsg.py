@@ -12,7 +12,8 @@ try:
 except ImportError:
     MPACK = False
 
-UNPACK = re.compile(b'(.*)\x00(.*)').match
+#UNPACK = re.compile(b'(.*)\x00(.*)').match
+UNPACK = re.compile(b'(.*)\x00(.*)\x00(.*)').match
 
 class Packer:
     #helper class for zeroMQ communicator
@@ -23,16 +24,17 @@ class Packer:
         else:
             self.packer = packer
 
-    def dumps(self, name, data):
+    def dumps(self, name, data, time):
         #Encode for sending
-        return b'\x00'.join((name.encode(), self.packer.dumps(data)))
+        return b'\x00'.join((name.encode(), self.packer.dumps(data), self.packer.dumps(float(time))))
 
     def loads(self, data):
         try:
             name, data = UNPACK(data).groups()
+            print(data)
             return name.decode(), self.packer.loads(data)
         except:
-            return "S1", 0
+            return "S1", 0, 0
 
 class csocket(Packer):
     
@@ -40,9 +42,9 @@ class csocket(Packer):
             self.socket = socket
             super().__init__(packer)
 
-    def send(self, name, data):
-        self.socket.send(self.dumps(str(name), data))
-        print("Sending: ", self.dumps(str(name), data))
+    def send(self, name, data, time):
+        self.socket.send(self.dumps(str(name), data, time))
+        print("Sending: ", self.dumps(str(name), data, time))
 
     def recv(self):
         return self.loads(self.socket.recv())
@@ -50,7 +52,7 @@ class csocket(Packer):
 
 class subcriber(QtCore.QObject,Packer):
 
-    message = QtCore.pyqtSignal(float)
+    message = QtCore.pyqtSignal(list)
 
     def __init__(self, packer = None):
         QtCore.QObject.__init__(self)
@@ -71,11 +73,13 @@ class subcriber(QtCore.QObject,Packer):
     def loop(self):
         while self.running:
             string = self.socket.recv()
-            name, data = UNPACK(string).groups()
-            print(name.decode())
-            print(self.packer.loads(data))
-            self.message.emit(float(self.packer.loads(data)))
-
+            if  UNPACK(string) != None:
+                name, data1, data2 = UNPACK(string).groups()
+                #print("Received: ", name.decode(), self.packer.loads(data1), self.packer.loads(data2))
+                try:
+                    self.message.emit([float(self.packer.loads(data1)),float(self.packer.loads(data2)+2)])
+                except:
+                    continue
 
 class QtWindow(QtWidgets.QMainWindow):
 
@@ -121,12 +125,12 @@ class QtWindow(QtWidgets.QMainWindow):
 
     def signalReceiver(self, message):
         #self.textEdit.append("%s\n" %message)
+        print("Signal received: ", message)
         self.AccBuffer = np.roll(self.AccBuffer,-1)
-        self.AccBuffer[-1] = float(message)
+        self.AccBuffer[-1] = float(message[0])
 
         self.AccCounter = np.roll(self.AccCounter,-1)
-        self.AccCounter[-1] = self.step
-        self.step = self.step + 1
+        self.AccCounter[-1] = float(message[1])
         self.Acc.setData(self.AccCounter,self.AccBuffer)
 
     def closeEvent(self,event):
