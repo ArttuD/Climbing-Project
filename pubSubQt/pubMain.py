@@ -27,4 +27,4 @@ while True:
     if i ==3:
         i=0
     
-    time.sleep(.5) #Sleep not to overheat CPU
+    time.sleep(.001) #Sleep not to overheat CPU
