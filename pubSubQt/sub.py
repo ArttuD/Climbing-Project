@@ -2,6 +2,7 @@
 #https://github.com/Sensirion/libsensors-python/blob/master/streaming_plot_client.py
 #Datalocker: https://doc.qt.io/qtforpython/tutorials/datavisualize/plot_datapoints.html
 #https://github.com/JustinTulloss/zeromq.node/blob/master/examples/pub_sub.js
+"""
 import sys
 import zmq
 import cMsg
@@ -24,4 +25,15 @@ while i<10000:
     topic, message = cSocket.recv()
     print("topic: ", topic, " message: ", message)
     i += 1
+"""
+import sys
+import zmq
+from PyQt5 import QtGui,QtWidgets
+import cMsg
+import pyqtgraph as pg
 
+app = pg.QtGui.QApplication(sys.argv)
+
+mw = cMsg.QtWindow()
+pg.QtGui.QApplication.processEvents()
+sys.exit(app.exec_())
