@@ -6,6 +6,7 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 import numpy as np
 from matplotlib.widgets import Widget
 import sys 
+import zmq
 
 class communicator:
 
@@ -41,6 +42,29 @@ class communicator:
     def closeSer(self):
         self.ser.close()
         print('Closing')
+
+class serverCom:
+    
+    def __init__(self, name):
+        self.portName = name
+        self.context = None
+        self.subscriber = None
+        self.mgs = None
+
+    def createConnections(self):
+        context = zmq.Context()
+        self.subscriber = context.socket(zmq.SUB)
+        self.subscriber.connect(self.portName)
+        self.subscriber.subscribe("") #sub all
+
+    def collect(self):
+        self.msg = self.subscriber.recv_multipart().split(",")
+        return self.msg
+
+    def kill(self):
+        self.context.destroy()
+
+
 
 
 class Visualizer:
@@ -126,6 +150,4 @@ class Visualizer:
         print("Closing visualizer")
         self.win.close()
         self.app.exit(0)
-
-
 
